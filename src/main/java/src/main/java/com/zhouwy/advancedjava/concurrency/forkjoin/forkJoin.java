@@ -1,4 +1,4 @@
-package fileDemo;
+package src.main.java.com.zhouwy.advancedjava.concurrency.forkjoin;
 
 import org.junit.Test;
 

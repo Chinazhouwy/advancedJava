@@ -3,52 +3,92 @@
         xmlns="http://maven.apache.org/POM/4.0.0"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>
-        4.0.0
-    </modelVersion>
+    <modelVersion>4.0.0</modelVersion>
 
-    <groupId>
-        com.zhouwy
-    </groupId>
-    <artifactId>
-        javaLearning
-    </artifactId>
-    <version>
-        1.0-SNAPSHOT
-    </version>
+    <groupId>com.zhouwy</groupId>
+    <artifactId>advancedJava</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.javassist</groupId>
+            <artifactId>javassist</artifactId>
+            <version>3.25.0-GA</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.1</version>
+            <scope>compile</scope>
+        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.sun</groupId>-->
+<!--            <artifactId>tools</artifactId>-->
+<!--            <version>1.8</version>-->
+<!--            <scope>system</scope>-->
+<!--            <systemPath>${java.home}/../lib/tools.jar</systemPath>-->
+<!--        </dependency>-->
+    </dependencies>
+
     <build>
         <plugins>
             <plugin>
-                <groupId>
-                    org.apache.maven.plugins
-                </groupId>
-                <artifactId>
-                    maven-compiler-plugin
-                </artifactId>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.1.1</version>
                 <configuration>
-                    <source>
-                        1.7
-                    </source>
-                    <target>
-                        1.7
-                    </target>
+                    <descriptorRefs>
+                        <!--将应用的所有依赖包都打到jar包中。如果依赖的是 jar 包，jar 包会被解压开，平铺到最终的 uber-jar 里去。输出格式为 jar-->
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <archive>
+                        <!-- 设置manifest配置文件-->
+                        <manifestEntries>
+                            <!--Premain-Class: 代表 Agent 静态加载时会调用的类全路径名。-->
+                            <Premain-Class>src.main.java.com.zhouwy.advancedjava.agent.MethodAgentMain</Premain-Class>
+                            <!--Agent-Class: 代表 Agent 动态加载时会调用的类全路径名。-->
+                            <Agent-Class>src.main.java.com.zhouwy.advancedjava.agent.MethodAgentMain</Agent-Class>
+                            <!--Can-Redefine-Classes: 是否可进行类定义。-->
+                            <Can-Redefine-Classes>true</Can-Redefine-Classes>
+                            <!--Can-Retransform-Classes: 是否可进行类转换。-->
+                            <Can-Retransform-Classes>true</Can-Retransform-Classes>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <!--绑定到package生命周期阶段上-->
+                        <phase>package</phase>
+                        <goals>
+                            <!--绑定到package生命周期阶段上-->
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    <compilerArgs>
+                        <arg>--add-modules</arg>
+                        <arg>jdk.attach</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
         </plugins>
     </build>
-    <dependencies>
-        <dependency>
-            <groupId>
-                junit
-            </groupId>
-            <artifactId>
-                junit
-            </artifactId>
-            <version>
-                4.12
-            </version>
-        </dependency>
-    </dependencies>
 
 
 </project>

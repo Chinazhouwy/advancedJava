@@ -1,4 +1,4 @@
-package fileDemo;
+package src.main.java.com.zhouwy.advancedjava.io;
 
 import org.junit.Test;
 
