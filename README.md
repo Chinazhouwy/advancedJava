@@ -7,21 +7,30 @@
 ```
 src/
 ├── main/
-│   ├── java/
-│   │   ├── demo/              # Java Agent相关示例
-│   │   │   └── MethodAgentMain.java
-│   │   └── testDemo/          # 各种测试示例
-│   │       ├── AgentTest.java
-│   │       ├── AttachMain.java
-│   │       ├── CharByte.java
-│   │       ├── ConditionTest.java
-│   │       ├── FileUtils.java
-│   │       ├── IOTests.java
-│   │       ├── RandAccessFileTests.java
-│   │       ├── RenentrantLockTest.java
-│   │       ├── ThreadApp.java
-│   │       ├── ThreadsInterrupt.java
-│   │       └── forkJoin.java
+│   └── java/
+│       └── com/
+│           └── zhouwy/
+│               └── advancedjava/
+│                   ├── agent/                     # Java Agent 相关类
+│                   │   └── MethodAgentMain.java   # Agent 主类
+│                   ├── concurrency/               # 并发编程相关类
+│                   │   ├── lock/
+│                   │   │   ├── ConditionTest.java
+│                   │   │   └── RenentrantLockTest.java
+│                   │   ├── forkjoin/
+│                   │   │   └── forkJoin.java
+│                   │   └── thread/
+│                   │       ├── ThreadApp.java
+│                   │       └── ThreadsInterrupt.java
+│                   ├── io/                        # IO操作相关类
+│                   │   ├── file/
+│                   │   │   ├── CharByte.java
+│                   │   │   ├── FileUtils.java
+│                   │   │   └── RandAccessFileTests.java
+│                   │   └── IOTests.java
+│                   └── demo/                      # 示例程序
+│                       ├── AgentTest.java         # Agent 测试类
+│                       └── AttachMain.java        # Attach 示例类
 ```
 
 ## 核心功能
@@ -32,29 +41,29 @@ src/
 
 #### 静态加载（Premain）
 - 在JVM启动时通过命令行参数加载Agent
-- [MethodAgentMain.java](src/main/java/demo/MethodAgentMain.java) 实现了premain方法
+- [MethodAgentMain.java](src/main/java/com/zhouwy/advancedjava/agent/MethodAgentMain.java) 实现了premain方法
 - 可以在类加载时对字节码进行修改
 
 #### 动态加载（Agentmain）
 - 在JVM运行时动态加载Agent
-- [MethodAgentMain.java](src/main/java/demo/MethodAgentMain.java) 实现了agentmain方法
+- [MethodAgentMain.java](src/main/java/com/zhouwy/advancedjava/agent/MethodAgentMain.java) 实现了agentmain方法
 - 使用[Javassist](https://www.javassist.org/)库对目标类的方法进行增强
 
 ### 2. 多线程编程示例
 
 包含了多个关于Java并发编程的示例：
-- [ConditionTest.java](src/main/java/testDemo/ConditionTest.java) - Condition条件变量使用示例
-- [RenentrantLockTest.java](src/main/java/testDemo/RenentrantLockTest.java) - 可重入锁使用示例
-- [ThreadsInterrupt.java](src/main/java/testDemo/ThreadsInterrupt.java) - 线程中断处理示例
-- [forkJoin.java](src/main/java/testDemo/forkJoin.java) - Fork/Join框架使用示例
+- [ConditionTest.java](src/main/java/com/zhouwy/advancedjava/concurrency/lock/ConditionTest.java) - Condition条件变量使用示例
+- [RenentrantLockTest.java](src/main/java/com/zhouwy/advancedjava/concurrency/lock/RenentrantLockTest.java) - 可重入锁使用示例
+- [ThreadsInterrupt.java](src/main/java/com/zhouwy/advancedjava/concurrency/thread/ThreadsInterrupt.java) - 线程中断处理示例
+- [forkJoin.java](src/main/java/com/zhouwy/advancedjava/concurrency/forkjoin/forkJoin.java) - Fork/Join框架使用示例
 
 ### 3. IO操作示例
 
 提供了各种IO操作的示例代码：
-- [CharByte.java](src/main/java/testDemo/CharByte.java) - 字符与字节流操作示例
-- [FileUtils.java](src/main/java/testDemo/FileUtils.java) - 文件工具类示例
-- [RandAccessFileTests.java](src/main/java/testDemo/RandAccessFileTests.java) - 随机访问文件示例
-- [IOTests.java](src/main/java/testDemo/IOTests.java) - 基础IO操作示例
+- [CharByte.java](src/main/java/com/zhouwy/advancedjava/io/file/CharByte.java) - 字符与字节流操作示例
+- [FileUtils.java](src/main/java/com/zhouwy/advancedjava/io/file/FileUtils.java) - 文件工具类示例
+- [RandAccessFileTests.java](src/main/java/com/zhouwy/advancedjava/io/file/RandAccessFileTests.java) - 随机访问文件示例
+- [IOTests.java](src/main/java/com/zhouwy/advancedjava/io/IOTests.java) - 基础IO操作示例
 
 ## 构建和运行
 
@@ -76,18 +85,18 @@ mvn clean package
 
 首先运行目标应用程序：
 ```bash
-java -cp target/advancedJava-1.0-SNAPSHOT.jar src.main.java.com.zhouwy.advancedjava.demo.AgentTest
+java -cp target/advancedJava-1.0-SNAPSHOT.jar com.zhouwy.advancedjava.demo.AgentTest
 ```
 
 然后在另一个终端中运行Attach程序来动态加载Agent：
 ```bash
-java -cp target/advancedJava-1.0-SNAPSHOT-jar-with-dependencies.jar src.main.java.com.zhouwy.advancedjava.demo.AttachMain
+java -cp target/advancedJava-1.0-SNAPSHOT-jar-with-dependencies.jar com.zhouwy.advancedjava.demo.AttachMain
 ```
 
 #### 静态加载Agent方式
 
 ```bash
-java -javaagent:target/advancedJava-1.0-SNAPSHOT-jar-with-dependencies.jar -cp target/advancedJava-1.0-SNAPSHOT.jar src.main.java.com.zhouwy.advancedjava.demo.AgentTest
+java -javaagent:target/advancedJava-1.0-SNAPSHOT-jar-with-dependencies.jar -cp target/advancedJava-1.0-SNAPSHOT.jar com.zhouwy.advancedjava.demo.AgentTest
 ```
 
 ## 依赖项
