@@ -39,6 +39,20 @@ src/
 │                   │   │   ├── CandidatePayloadRecord.java
 │                   │   │   ├── CandidatePayloadClassic.java
 │                   │   │   └── JsonSerializationDemoApp.java
+│                   │   ├── concurrency/
+│                   │   │   ├── ConcurrencyFeatureShowcaseApp.java
+│                   │   │   ├── ThreadPoolTuningDemo.java
+│                   │   │   ├── CompletableFutureOrchestrationDemo.java
+│                   │   │   ├── SemaphoreBulkheadDemo.java
+│                   │   │   ├── CountDownLatchBatchDemo.java
+│                   │   │   ├── LongAdderVsAtomicLongDemo.java
+│                   │   │   ├── StampedLockOptimisticReadDemo.java
+│                   │   │   ├── AqsCustomMutexDemo.java
+│                   │   │   ├── LockSupportHandshakeDemo.java
+│                   │   │   ├── ConcurrentSkipListMapRankingDemo.java
+│                   │   │   ├── CopyOnWriteArrayListReadMostlyDemo.java
+│                   │   │   ├── ConcurrentHashMapComputeDemo.java
+│                   │   │   └── CyclicBarrierPhaserDemo.java
 │                   │   └── frameworks/
 │                   │       ├── spring/
 │                   │       │   ├── InterviewAiProperties.java
@@ -118,6 +132,24 @@ src/
 - [InterviewResultRepository.java](src/main/java/com/advancedjava/interview/frameworks/springdata/InterviewResultRepository.java) - JPA 用 record 做查询投影（constructor expression）
 - [RecordIntrospectionDemo.java](src/main/java/com/advancedjava/interview/frameworks/jdk/RecordIntrospectionDemo.java) - JDK 反射 API 读取 record 元数据
 - [RecordIntrospectionDemoTest.java](src/test/java/com/advancedjava/interview/frameworks/jdk/RecordIntrospectionDemoTest.java) - JDK record 反射测试
+
+### 7. 并发高级功能点小 Demo
+
+新增了可直接运行的并发小实验（均带中文注释）：
+- [ConcurrencyFeatureShowcaseApp.java](src/main/java/com/advancedjava/interview/concurrency/ConcurrencyFeatureShowcaseApp.java) - 串联入口，一次跑完全部 demo
+- [ThreadPoolTuningDemo.java](src/main/java/com/advancedjava/interview/concurrency/ThreadPoolTuningDemo.java) - 线程池参数与拒绝策略（CallerRuns 背压）
+- [CompletableFutureOrchestrationDemo.java](src/main/java/com/advancedjava/interview/concurrency/CompletableFutureOrchestrationDemo.java) - 并行编排、超时与兜底
+- [SemaphoreBulkheadDemo.java](src/main/java/com/advancedjava/interview/concurrency/SemaphoreBulkheadDemo.java) - Semaphore 限流/舱壁
+- [CountDownLatchBatchDemo.java](src/main/java/com/advancedjava/interview/concurrency/CountDownLatchBatchDemo.java) - 批任务汇聚
+- [LongAdderVsAtomicLongDemo.java](src/main/java/com/advancedjava/interview/concurrency/LongAdderVsAtomicLongDemo.java) - 高竞争计数对比
+- [StampedLockOptimisticReadDemo.java](src/main/java/com/advancedjava/interview/concurrency/StampedLockOptimisticReadDemo.java) - 乐观读 + 回退悲观读
+- [AqsCustomMutexDemo.java](src/main/java/com/advancedjava/interview/concurrency/AqsCustomMutexDemo.java) - AQS 自定义同步器（不可重入互斥锁）
+- [LockSupportHandshakeDemo.java](src/main/java/com/advancedjava/interview/concurrency/LockSupportHandshakeDemo.java) - LockSupport 线程握手
+- [ConcurrentSkipListMapRankingDemo.java](src/main/java/com/advancedjava/interview/concurrency/ConcurrentSkipListMapRankingDemo.java) - 跳表有序并发容器
+- [CopyOnWriteArrayListReadMostlyDemo.java](src/main/java/com/advancedjava/interview/concurrency/CopyOnWriteArrayListReadMostlyDemo.java) - 读多写少容器
+- [ConcurrentHashMapComputeDemo.java](src/main/java/com/advancedjava/interview/concurrency/ConcurrentHashMapComputeDemo.java) - compute 原子更新防超卖
+- [CyclicBarrierPhaserDemo.java](src/main/java/com/advancedjava/interview/concurrency/CyclicBarrierPhaserDemo.java) - 多阶段协作
+- [CONCURRENCY_STUDY_MAP.md](CONCURRENCY_STUDY_MAP.md) - 并发高级知识总图（已覆盖/待进阶）
 
 ## 构建和运行
 
@@ -227,6 +259,16 @@ javac -d /tmp/framework-jdk-test-classes \
   src/test/java/com/advancedjava/interview/frameworks/jdk/RecordIntrospectionDemoTest.java
 java -cp "/tmp/framework-jdk-test-classes:$HOME/.m2/repository/junit/junit/4.13.1/junit-4.13.1.jar:$HOME/.m2/repository/org/hamcrest/hamcrest/2.2/hamcrest-2.2.jar" \
   org.junit.runner.JUnitCore com.advancedjava.interview.frameworks.jdk.RecordIntrospectionDemoTest
+```
+
+#### 运行并发功能点串联 Demo
+
+```bash
+mkdir -p /tmp/concurrency-demo-classes
+javac -d /tmp/concurrency-demo-classes \
+  src/main/java/com/advancedjava/interview/concurrency/*.java
+java -cp /tmp/concurrency-demo-classes \
+  com.advancedjava.interview.concurrency.ConcurrencyFeatureShowcaseApp
 ```
 
 ## 依赖项

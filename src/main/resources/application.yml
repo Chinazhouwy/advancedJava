@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: quant-monitor
+  ai:
+    chat:
+      client:
+        enabled: false
+    openai:
+      api-key: sk-295f57e0ed6245d9861ca5aa8ab02b15
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.7
+          max-tokens: 2000
+      embedding:
+        enabled: false
+
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# 日志配置
+logging:
+  level:
+    com.quant: info
+    org.springframework.ai: debug
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
