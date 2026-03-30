@@ -1,326 +1,71 @@
-# AGENTS.md - Coding Agent Guidelines
+# AGENTS.md - 代码智能体开发指南
+本文档为在本代码仓库中工作的AI编码智能体提供核心操作规范。本仓库是基于**Java 17 + Maven + Spring Boot 3.3.0**的Java进阶项目，核心内容包括：Java Agent技术、并发编程模式、Java Records特性、序列化（Jackson/Fastjson2）、IO操作以及Spring框架集成。
 
-This document provides essential information for agentic coding systems working in this repository. It covers build commands, testing procedures, code style guidelines, and project conventions.
-
-## Project Overview
-
-This is a Java 17+ Maven project focused on advanced Java features including:
-- Java Agent technology (static/dynamic loading)
-- Concurrency programming patterns
-- Java Records with Spring Boot integration
-- Serialization examples (Jackson/Fastjson2)
-- IO operations and file handling
-- Spring Framework integration (Web, Data JPA, Properties)
-
-The project uses Spring Boot 3.3.0 as the parent and includes various Spring starters.
-
-## Build Commands
-
-### Basic Build Operations
-
+---
+## 构建命令
 ```bash
-# Clean and compile
+# 清理并编译代码
 mvn clean compile
-
-# Clean and package (creates JAR files)
+# 清理并打包（生成普通JAR + 包含所有依赖的可执行Uber JAR）
 mvn clean package
-
-# Clean, compile, and run all tests
-mvn clean test
-
-# Clean, compile, package, and install to local repo
+# 清理并安装到本地Maven仓库
 mvn clean install
-
-# Skip tests during build
+# 跳过测试构建
 mvn clean package -DskipTests
-
-# Run with specific Java version (if needed)
-mvn clean package -Dmaven.compiler.source=17 -Dmaven.compiler.target=17
-```
-
-### Running Specific Applications
-
-```bash
-# Run Record demo application
-java -cp target/classes com.advancedjava.interview.records.RecordDemoApp
-
-# Run concurrency showcase
-java -cp target/classes com.advancedjava.interview.concurrency.ConcurrencyFeatureShowcaseApp
-
-# Run serialization demo
-java -cp target/classes com.advancedjava.interview.serialization.JsonSerializationDemoApp
-
-# Run Spring Boot application (if enabled)
+# 运行Spring Boot应用
 mvn spring-boot:run
 ```
 
-## Test Commands
-
-### Running Tests
-
+---
+## 测试命令
 ```bash
-# Run all tests
+# 运行所有测试
 mvn test
-
-# Run a specific test class
+# 运行单个测试类
 mvn test -Dtest=CandidateProfileTest
-
-# Run a specific test method
+# 运行单个测试方法
 mvn test -Dtest=CandidateProfileTest#shouldTrimNameAndDefensivelyCopySkills
-
-# Run tests matching pattern
+# 运行名称匹配指定模式的测试
 mvn test -Dtest=*Record*Test
-
-# Run tests with specific JVM arguments
-mvn test -DargLine="-Xmx1g"
-
-# Skip specific tests
-mvn test -Dtest=!CandidateProfileTest
 ```
+测试框架使用：JUnit 4.13.1 + Hamcrest断言库，测试代码统一存放在`src/test/java`目录下。
 
-### Manual Test Compilation (for understanding)
+---
+## 代码风格规范
+### 导入顺序
+1. Java标准库包（`java.*`, `javax.*`）
+2. 第三方依赖库（`org.junit`, `com.alibaba.fastjson2`等）
+3. 项目内部代码（`com.advancedjava.*`）
+除非是教学演示必须，否则禁止随意新增第三方依赖。
 
-The README shows manual compilation examples that may be useful for agents to understand dependencies:
+### 格式化规范
+- 缩进：4个空格（禁止使用Tab）
+- 大括号：即使是单行语句也必须使用大括号
+- 空格：关键字后加空格（`if `, `for `），运算符前后加空格（`a + b`），方法名和括号之间不加空格
+- 行长度：无严格限制，优先保证可读性
 
-```bash
-# Compile and run record tests manually
-mkdir -p /tmp/record-test-classes
-javac -d /tmp/record-test-classes \
-  -cp "$HOME/.m2/repository/junit/junit/4.13.1/junit-4.13.1.jar:$HOME/.m2/repository/org/hamcrest/hamcrest/2.2/hamcrest-2.2.jar" \
-  src/main/java/com/advancedjava/interview/records/CandidateProfile.java \
-  src/main/java/com/advancedjava/interview/records/CandidateProfileClassic.java \
-  src/main/java/com/advancedjava/interview/records/InterviewResult.java \
-  src/main/java/com/advancedjava/interview/records/InterviewResultClassic.java \
-  src/test/java/com/advancedjava/interview/records/CandidateProfileTest.java
-java -cp "/tmp/record-test-classes:$HOME/.m2/repository/junit/junit/4.13.1/junit-4.13.1.jar:$HOME/.m2/repository/org/hamcrest/hamcrest/2.2/hamcrest-2.2.jar" \
-  org.junit.runner.JUnitCore com.advancedjava.interview.records.CandidateProfileTest
-```
+### 命名规范
+- 类名：大驼峰命名（`CandidateProfile`, `ConcurrencyDemoApp`）
+- 方法/变量名：小驼峰命名（`hasSkill()`, `candidateProfile`）
+- 测试方法名：以`should`开头或清晰描述行为（`shouldValidateNullName`）
+- 包名：全小写，用点分隔（`com.advancedjava.interview.records`）
 
-### Testing Framework
+### 类型与声明规范
+- 优先使用Java 17+新特性：用records作为不可变数据载体，使用密封类、模式匹配等特性
+- Records规范：在紧凑构造器中完成参数校验，对可变字段做防御性拷贝
+- 泛型：合理使用泛型保证类型安全，复杂类型推断场景可使用`var`关键字
+- POJO规范：正确实现`equals()`, `hashCode()`, `toString()`方法，对可变参数做防御性拷贝
 
-- **Primary**: JUnit 4.13.1
-- **Assertions**: JUnit Assert + Hamcrest matchers
-- **Test Runner**: Maven Surefire Plugin
-- **Test Location**: `src/test/java`
-- **No test resources**: Tests don't use external resources
+### 错误处理规范
+- 优先使用Java标准异常（`IllegalArgumentException`, `UnsupportedOperationException`）
+- 所有公共API入口必须做参数校验，包含清晰的错误信息
+- 只有能显著提升代码价值时才自定义异常，编程错误优先使用非受检异常
 
-## Code Style Guidelines
-
-### General Principles
-
-1. **Follow existing patterns**: Always examine nearby files before making changes
-2. **Java 17+ features encouraged**: Use records, sealed classes, pattern matching, etc.
-3. **Spring Boot conventions**: Follow Spring Boot best practices when working with Spring components
-4. **Educational focus**: Code should be clear and demonstrate concepts effectively
-
-### Package Structure
-
-```
-com.advancedjava
-├── agent/                    # Java Agent implementations
-├── concurrency/              # Concurrency examples
-│   ├── lock/                 # Lock implementations
-│   ├── forkjoin/             # Fork/Join framework
-│   └── thread/               # Thread management
-├── demo/                     # Demo applications
-├── io/                       # IO operations
-│   └── file/                 # File-specific operations
-├── interview/                # Interview-focused examples
-│   ├── records/              # Java Records examples
-│   ├── serialization/        # Serialization examples  
-│   ├── concurrency/          # Concurrency interview demos
-│   └── frameworks/           # Framework integrations
-│       ├── spring/           # Spring Boot examples
-│       ├── springdata/       # Spring Data JPA examples
-│       └── jdk/              # JDK-specific examples
-└── springai/                 # Spring AI examples (currently commented)
-```
-
-### Imports and Dependencies
-
-**Required imports order** (based on observed patterns):
-1. Standard Java packages (`java.*`, `javax.*`)
-2. Third-party libraries (`org.junit`, `com.alibaba.fastjson2`, etc.)
-3. Project-specific imports (`com.advancedjava.*`)
-
-**Key dependencies to use**:
-- **Testing**: `org.junit.Assert`, `org.junit.Test`
-- **Collections**: Standard Java collections (ArrayList, List.of, etc.)
-- **JSON**: Fastjson2 (`com.alibaba.fastjson2`) and Jackson (when needed)
-- **Concurrency**: Standard `java.util.concurrent` packages
-- **Spring**: Only when working in framework-related packages
-
-**Avoid adding new dependencies** unless absolutely necessary and consistent with the educational purpose.
-
-### Formatting Conventions
-
-**Indentation**: 4 spaces (no tabs)
-**Line length**: No strict limit, but prefer reasonable lengths
-**Braces**: Always use braces, even for single statements
-**Spacing**: 
-- Space after keywords (`if `, `for `, `while `)
-- Space around operators (`a + b`, not `a+b`)
-- No space between method name and parentheses (`method()`)
-- Space after commas in parameter lists
-
-**Example format**:
-```java
-public class Example {
-    public void demonstrateFormatting() {
-        if (someCondition) {
-            for (int i = 0; i < 10; i++) {
-                String result = processItem(items.get(i));
-                if (result != null && result.length() > 0) {
-                    handleResult(result);
-                }
-            }
-        }
-    }
-}
-```
-
-### Naming Conventions
-
-**Classes**: PascalCase - `CandidateProfile`, `ConcurrencyFeatureShowcaseApp`
-**Methods**: camelCase - `shouldTrimNameAndDefensivelyCopySkills()`, `run()`
-**Variables**: camelCase - `candidateProfile`, `sourceSkills`
-**Constants**: UPPER_SNAKE_CASE - Not commonly used, prefer `final` variables
-**Test methods**: Should start with `should` or describe behavior clearly - `shouldUseValueBasedEquality()`
-
-**Package names**: All lowercase with dot-separated words - `com.advancedjava.interview.records`
-
-### Types and Declarations
-
-**Records usage**:
-- Use records for immutable data carriers
-- Include validation in compact constructors
-- Use defensive copying for mutable fields
-- Provide static factory methods when appropriate
-
-**Classic POJOs**:
-- Include validation in constructors/setters
-- Implement proper `equals()`, `hashCode()`, `toString()`
-- Use defensive copying for mutable fields
-- Provide meaningful business methods
-
-**Generics**: Use when appropriate, especially in collection-heavy code
-**Var keyword**: Acceptable for complex generic type inference
-
-### Error Handling
-
-**Exception types**:
-- Use standard Java exceptions (`IllegalArgumentException`, `UnsupportedOperationException`)
-- Create custom exceptions only when they add significant value
-- Prefer unchecked exceptions for programming errors
-
-**Validation patterns**:
-```java
-// Constructor validation
-public CandidateProfile(String name, int yearsOfExperience, List<String> skills) {
-    if (name == null || name.trim().isEmpty()) {
-        throw new IllegalArgumentException("Name cannot be null or empty");
-    }
-    if (yearsOfExperience < 0) {
-        throw new IllegalArgumentException("Years of experience cannot be negative");
-    }
-    // Defensive copy
-    this.skills = List.copyOf(skills);
-}
-
-// Method validation  
-public void addSkill(String skill) {
-    if (skill == null || skill.trim().isEmpty()) {
-        throw new IllegalArgumentException("Skill cannot be null or empty");
-    }
-    // implementation
-}
-```
-
-**Test error handling**:
-- Use custom `assertThrows` helper method for exception testing
-- Always include meaningful failure messages in assertions
-
-### Documentation
-
-**Class-level Javadoc**: Required for public classes, especially in demo applications
-**Method-level Javadoc**: Required for public methods that aren't self-explanatory
-**Field-level Javadoc**: Generally not needed for simple fields
-
-**Chinese comments**: Some files contain Chinese comments for educational purposes. Maintain consistency within each file.
-
-**README updates**: When adding significant new functionality, update the README.md structure and examples.
-
-## Special Considerations
-
-### Java Agent Development
-
-When working with Agent code (`com.advancedjava.agent`):
-- Understand both static (`premain`) and dynamic (`agentmain`) loading
-- Use Javassist for bytecode manipulation
-- Handle attach permissions appropriately
-- The main agent class is `MethodAgentMain.java`
-
-### Concurrency Examples
-
-Concurrency demos should:
-- Clearly demonstrate the concept being taught
-- Include proper error handling and resource cleanup
-- Use realistic scenarios where possible
-- Follow Java concurrency best practices
-
-### Spring Integration
-
-When working with Spring components:
-- Use proper Spring annotations (`@RestController`, `@ConfigurationProperties`, etc.)
-- Follow Spring Boot conventions for configuration
-- Use constructor injection over field injection when possible
-- Respect Spring's component lifecycle
-
-### Record Compatibility
-
-Records should be designed to work well with:
-- JSON serialization (Fastjson2 and Jackson)
-- Spring Data JPA projections
-- Standard Java reflection
-- Traditional POJO equivalents (for comparison)
-
-## Verification Commands
-
-After making changes, always verify with:
-
-```bash
-# Compile check
-mvn compile
-
-# Test execution  
-mvn test
-
-# Full build
-mvn package
-
-# Specific test verification (replace TestClassName)
-mvn test -Dtest=TestClassName
-```
-
-## Performance and Security
-
-**Performance considerations**:
-- Use appropriate concurrent collections for multi-threaded scenarios
-- Avoid unnecessary object creation in loops
-- Use `List.of()` and similar for immutable collections
-
-**Security considerations**:
-- Never log sensitive information
-- Validate all inputs in public APIs
-- Use defensive copying for mutable parameters
-- Handle resources properly (close streams, etc.)
-
-## Additional Notes
-
-- **No build tools beyond Maven**: Don't introduce Gradle, Bazel, etc.
-- **Java version locked**: Must remain compatible with Java 17+
-- **Educational purpose**: Code clarity trumps micro-optimizations
-- **Consistency over cleverness**: Prefer readable, maintainable code
-- **Test coverage**: New functionality should include appropriate tests
-
-This repository serves as both a learning resource and demonstration of advanced Java features. All contributions should maintain this educational focus while following established conventions.
+---
+## 核心约定
+1. 编写代码前先参考同目录下的现有文件，保持风格一致
+2. 现有文件中的中文注释要保持一致性（项目以教学演示为目的）
+3. 代码清晰度优先于微优化（教学属性是本项目核心）
+4. 新增功能必须包含对应的测试覆盖
+5. 禁止使用Maven以外的构建工具，Java版本锁定为17+
+6. Spring组件开发：遵循Spring Boot规范，优先使用构造注入而非字段注入
