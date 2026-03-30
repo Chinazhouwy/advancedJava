@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "opencli-rs": {
+      "source": "nashsu/opencli-rs-skill",
+      "sourceType": "github",
+      "computedHash": "0cee622ed0244e8b2bd19bf426ab84795c04d5fb2fbeb65b7a3af63c6e30b2b6"
+    }
+  }
+}
