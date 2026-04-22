@@ -1,10 +1,22 @@
 package com.advancedjava.ta4j;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.List;
+import javax.swing.JFrame;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.time.Day;
+import org.jfree.data.time.TimeSeries;
+import org.jfree.data.time.TimeSeriesCollection;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseBar;
-import org.ta4j.core.BaseBarSeries;
 import org.ta4j.core.BaseBarSeriesBuilder;
-import org.ta4j.core.indicators.*;
 import org.ta4j.core.indicators.averages.EMAIndicator;
 import org.ta4j.core.indicators.averages.SMAIndicator;
 import org.ta4j.core.indicators.averages.WMAIndicator;
@@ -12,29 +24,26 @@ import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 import org.ta4j.core.num.DecimalNumFactory;
 import org.ta4j.core.num.Num;
 
-import javax.swing.*;
-import java.time.Duration;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-
-// 添加缺失的导入
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartPanel;
-import org.jfree.chart.JFreeChart;
-import org.jfree.data.time.Day;
-import org.jfree.data.time.TimeSeries;
-import org.jfree.data.time.TimeSeriesCollection;
-
-
+/**
+ * ta4j 经典移动平均线绘图示例。
+ *
+ * <p>本类演示如何：
+ * 1. 从 CSV 读取日线行情。
+ * 2. 构建 ta4j 的 {@code BarSeries}。
+ * 3. 计算 SMA、EMA、WMA 三类均线。
+ * 4. 使用 JFreeChart 将价格与指标曲线画出来。
+ *
+ * <p>当前实现已经按项目里使用的 ta4j 0.22.6 版本调整过 API 调用方式，
+ * 因此既能保留教学可读性，也能通过编译。
+ */
 public class ClassicMAChartDemo {
 
+    /**
+     * 示例入口：读取 CSV、计算均线并弹出图表窗口。
+     */
     public static void main(String[] args) {
-        // 加载真实数据
-        // 使用ta4j内置的CsvBarsLoader加载数据
         BarSeries series = null;
         try {
-            // 尝试从资源文件夹加载CSV数据
             series = loadFromCsvResource("AAPL-2024.csv");
         } catch (Exception e) {
             System.err.println("Error loading CSV data: " + e.getMessage());
@@ -42,23 +51,19 @@ public class ClassicMAChartDemo {
             return;
         }
 
-//        BarSeries series = CsvBarsLoader.loadCsvSeries("AAPL-2024.csv");
         ClosePriceIndicator closePrice = new ClosePriceIndicator(series);
         int period = 20;
 
-        // 创建三个经典移动平均线指标
         SMAIndicator sma = new SMAIndicator(closePrice, period);
         EMAIndicator ema = new EMAIndicator(closePrice, period);
         WMAIndicator wma = new WMAIndicator(closePrice, period);
 
-        // 创建数据集
         TimeSeriesCollection dataset = new TimeSeriesCollection();
         dataset.addSeries(createTimeSeries(series, closePrice, "Close Price"));
         dataset.addSeries(createTimeSeries(series, sma, "SMA (" + period + ")"));
         dataset.addSeries(createTimeSeries(series, ema, "EMA (" + period + ")"));
         dataset.addSeries(createTimeSeries(series, wma, "WMA (" + period + ")"));
 
-        // 创建并显示图表
         JFreeChart chart = ChartFactory.createTimeSeriesChart(
                 "Apple Stock - Moving Averages Comparison (Period 20)",
                 "Date", "Price (USD)", dataset, true, true, false);
@@ -71,22 +76,18 @@ public class ClassicMAChartDemo {
         frame.setVisible(true);
     }
 
-    private static TimeSeries createTimeSeries(BarSeries series,
-                                               org.ta4j.core.Indicator<Num> indicator,
-                                               String name) {
+    /**
+     * 把 ta4j 指标转换成 JFreeChart 的时间序列。
+     */
+    private static TimeSeries createTimeSeries(
+            BarSeries series, org.ta4j.core.Indicator<Num> indicator, String name) {
         TimeSeries timeSeries = new TimeSeries(name);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                .withZone(ZoneId.systemDefault());
 
         for (int i = 0; i < series.getBarCount(); i++) {
-            String dateStr = series.getBar(i).getEndTime().toString().substring(0, 10);
+            LocalDate date = series.getBar(i).getEndTime().atZone(ZoneOffset.UTC).toLocalDate();
             double value = indicator.getValue(i).doubleValue();
             if (!Double.isNaN(value)) {
-                Day day = new Day(
-                        Integer.parseInt(dateStr.substring(8, 10)),
-                        Integer.parseInt(dateStr.substring(5, 7)),
-                        Integer.parseInt(dateStr.substring(0, 4))
-                );
+                Day day = new Day(date.getDayOfMonth(), date.getMonthValue(), date.getYear());
                 timeSeries.addOrUpdate(day, value);
             }
         }
@@ -94,15 +95,20 @@ public class ClassicMAChartDemo {
     }
 
     /**
-     * 从CSV资源文件加载BarSeries
+     * 从 CSV 资源文件加载 BarSeries。
+     *
+     * <p>CSV 列格式：date,open,high,low,close,volume
      */
     private static BarSeries loadFromCsvResource(String csvFileName) throws Exception {
-        List<String> lines = java.nio.file.Files.readAllLines(
-                java.nio.file.Paths.get("src/main/resources/" + csvFileName));
+        List<String> lines = Files.readAllLines(Path.of("src/main/resources", csvFileName));
 
-        // 跳过标题行
         boolean skipHeader = true;
-        BaseBarSeries series = new BaseBarSeries("AAPL");
+        BarSeries series =
+                new BaseBarSeriesBuilder()
+                        .withName("AAPL")
+                        .withNumFactory(DecimalNumFactory.getInstance())
+                        .build();
+        var numFactory = series.numFactory();
 
         for (String line : lines) {
             if (skipHeader) {
@@ -118,21 +124,24 @@ public class ClassicMAChartDemo {
                 double low = Double.parseDouble(values[3]);
                 double close = Double.parseDouble(values[4]);
                 long volume = Long.parseLong(values[5]);
+                Instant endTime = LocalDate.parse(dateStr).atStartOfDay(ZoneOffset.UTC).toInstant();
 
-                java.time.ZonedDateTime dateTime = java.time.ZonedDateTime.parse(dateStr + "T00:00:00Z");
-
-                // Create Num instances from double values
-                BaseBar bar = BaseBar.builder(Duration.ofDays(1), dateTime)
-                    .openPrice(series.numOf(open))
-                    .highPrice(series.numOf(high))
-                    .lowPrice(series.numOf(low))
-                    .closePrice(series.numOf(close))
-                    .volume(volume)
-                    .build();
-                series.addBar(bar);
+                BaseBar bar =
+                        new BaseBar(
+                                Duration.ofDays(1),
+                                endTime.minus(Duration.ofDays(1)),
+                                endTime,
+                                numFactory.numOf(open),
+                                numFactory.numOf(high),
+                                numFactory.numOf(low),
+                                numFactory.numOf(close),
+                                numFactory.numOf(volume),
+                                numFactory.zero(),
+                                0L);
+                series.addBar(bar, true);
             }
         }
 
-        return seriesBuilder.build();
+        return series;
     }
 }

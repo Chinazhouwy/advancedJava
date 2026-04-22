@@ -5,6 +5,12 @@ import org.junit.Test;
 
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * ReentrantLock 基础示例。
+ *
+ * <p>该类通过“直接自增”和“加锁自增”的对比，
+ * 说明对共享变量的复合操作在并发场景下为何需要互斥保护。
+ */
 public class RenentrantLockTest {
 
 

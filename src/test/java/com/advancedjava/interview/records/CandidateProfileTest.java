@@ -6,6 +6,12 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * {@link CandidateProfile} 与相关模型的行为测试。
+ *
+ * <p>测试覆盖 name 规范化、防御性拷贝、值语义、非法参数校验，
+ * 以及 record 与传统类版本的行为一致性。
+ */
 public class CandidateProfileTest {
 
     @Test

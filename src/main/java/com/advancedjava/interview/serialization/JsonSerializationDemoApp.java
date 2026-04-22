@@ -6,11 +6,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
+/**
+ * JSON 序列化演示入口。
+ *
+ * <p>该示例同时使用 Jackson 与 Fastjson2，对 record 和传统 POJO 做序列化回环，
+ * 并额外验证旧字段名兼容与忽略未知字段的行为。
+ */
 public class JsonSerializationDemoApp {
 
     private static final ObjectMapper JACKSON = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
+    /**
+     * 运行 Jackson/Fastjson2 的序列化对比，并打印结果。
+     */
     public static void main(String[] args) throws Exception {
         CandidatePayloadRecord recordData = new CandidatePayloadRecord("  Alice  ", 6, List.of("Java", "Spring"));
         CandidatePayloadClassic classicData = new CandidatePayloadClassic("  Bob  ", 4, List.of("Java", "Redis"));

@@ -6,6 +6,12 @@ import org.junit.Test;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.RecordComponent;
 
+/**
+ * record 运行期反射能力测试。
+ *
+ * <p>该测试验证 JDK 是否正确暴露 record 元数据，
+ * 并检查规范构造器能否被反射创建实例。
+ */
 public class RecordIntrospectionDemoTest {
 
     @Test

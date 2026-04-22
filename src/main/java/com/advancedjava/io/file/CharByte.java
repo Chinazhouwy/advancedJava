@@ -2,9 +2,19 @@ package com.advancedjava.io.file;
 
 import org.junit.Test;
 
+/**
+ * char 与 byte 基础差异示例。
+ *
+ * <p>该类用最简单的打印方式说明：
+ * char 是无符号 16 位编码单元，而 byte 是有符号 8 位整数，
+ * 两者在取值范围和类型语义上并不相同。
+ */
 public class CharByte {
 
     @Test
+    /**
+     * 观察 char 在数值强转时的表现。
+     */
     public void CharTest(){
         //char 是无符号型的，可以表示一个整数，不能表示负数 ?? 0 ~ 65535
         char a = (char) 3;
@@ -14,6 +24,9 @@ public class CharByte {
     }
 
     @Test
+    /**
+     * 观察 byte 的有符号取值范围。
+     */
     public void ByteTest(){
         //而byte是有符号型的，可以表示-128—127 的数
         byte d1 = 1;

@@ -8,6 +8,12 @@ import org.junit.Test;
 
 import java.util.List;
 
+/**
+ * JSON 序列化教学示例测试。
+ *
+ * <p>这里重点验证 record/传统 POJO 在 Jackson 与 Fastjson2 下的回环结果，
+ * 以及旧字段兼容场景的读取行为。
+ */
 public class JsonSerializationExamplesTest {
 
     private static final ObjectMapper JACKSON = new ObjectMapper()

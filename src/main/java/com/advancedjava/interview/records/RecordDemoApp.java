@@ -3,8 +3,17 @@ package com.advancedjava.interview.records;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * record 与传统 POJO 对比演示入口。
+ *
+ * <p>通过打印结果对比两套模型对象的访问器命名、值语义、防御性拷贝和工厂方法表达力，
+ * 帮助读者快速感受 Java record 在教学示例中的优势。
+ */
 public class RecordDemoApp {
 
+    /**
+     * 同时打印 record 与传统类的行为，便于直接比较两种建模方式。
+     */
     public static void main(String[] args) {
         // ==================== record 写法 ====================
         // 外部传入可变 List

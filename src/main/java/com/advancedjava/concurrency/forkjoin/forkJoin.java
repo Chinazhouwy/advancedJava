@@ -6,6 +6,12 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Fork/Join 分治示例。
+ *
+ * <p>该类使用一个简单的区间打印任务说明 Fork/Join 的基本工作方式：
+ * 当任务范围较大时继续拆分，当任务足够小后直接执行。
+ */
 public class forkJoin {
 
     @Test

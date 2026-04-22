@@ -10,6 +10,15 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 
+/**
+ * Java Agent 入口类。
+ *
+ * <p>本类同时提供 premain 与 agentmain 两种入口，分别对应：
+ * 1. JVM 启动前通过 {@code -javaagent} 静态加载。
+ * 2. 目标 JVM 运行中通过 Attach API 动态加载。
+ *
+ * <p>示例目的不是实现复杂增强逻辑，而是演示如何找到目标类并在方法前后插入日志输出。
+ */
 public class MethodAgentMain {
 
     /**
@@ -19,6 +28,9 @@ public class MethodAgentMain {
 
     /**
      * 静态加载。Java agent指定的premain方法，会在main方法之前被调用
+     *
+     * @param args agent 启动参数
+     * @param instrumentation JVM 提供的类增强入口
      */
     public static void premain(String args, Instrumentation instrumentation) {
         System.out.println("premain start!");
@@ -27,7 +39,13 @@ public class MethodAgentMain {
     }
 
     /**
-     * 动态加载。Java agent指定的premain方法，会在main方法之前被调用
+     * 动态加载入口。
+     *
+     * <p>当外部进程通过 Attach API 加载 Agent 时，JVM 会执行这里，
+     * 然后对目标类发起重新转换。
+     *
+     * @param args agent 启动参数
+     * @param instrumentation JVM 提供的类增强入口
      */
     public static void agentmain(String args, Instrumentation instrumentation) {
         System.out.println("agentmain start!");
@@ -57,6 +75,9 @@ public class MethodAgentMain {
         System.out.println("agentmain end!");
     }
 
+    /**
+     * 注册字节码转换器，只在命中目标类时插入方法前后日志。
+     */
     private static void addTransformer(Instrumentation instrumentation) {
         /* Instrumentation提供的addTransformer方法，在类加载时会回调ClassFileTransformer接口 */
         instrumentation.addTransformer(new ClassFileTransformer() {

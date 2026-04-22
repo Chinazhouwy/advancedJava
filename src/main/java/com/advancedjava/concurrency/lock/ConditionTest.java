@@ -7,6 +7,14 @@ import java.util.Stack;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * ReentrantLock 与 Condition 教学示例。
+ *
+ * <p>本类通过三个测试方法递进展示：
+ * 1. 不加锁时，共享账户数据会出现竞态条件。
+ * 2. 使用显式锁后，转账操作可以维持总额不变。
+ * 3. 使用 Condition 后，线程可以在特定条件不满足时等待、在条件满足时被唤醒。
+ */
 public class ConditionTest {
 
     public static int THREADS_COUNT = 20;

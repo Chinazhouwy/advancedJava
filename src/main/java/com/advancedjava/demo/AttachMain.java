@@ -5,8 +5,17 @@ import com.sun.tools.attach.VirtualMachineDescriptor;
 
 import java.util.List;
 
+/**
+ * 动态 attach Java Agent 的示例入口。
+ *
+ * <p>运行该类后，会枚举当前 JVM 列表，查找目标演示进程，
+ * 然后把包含 {@code agentmain} 的 Agent JAR 动态加载到目标 JVM 中。
+ */
 public class AttachMain {
 
+    /**
+     * 查找目标 JVM，并把 Agent JAR 动态加载进去。
+     */
     public static void main(String[] args) throws Exception {
         List<VirtualMachineDescriptor> listBefore = VirtualMachine.list();
         // agentmain()方法所在jar包
