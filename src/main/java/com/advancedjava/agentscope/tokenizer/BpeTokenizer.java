@@ -233,7 +233,16 @@ public class BpeTokenizer {
     public Set<String> getVocabulary() {
         return Collections.unmodifiableSet(vocabulary);
     }
-    
+
+    /**
+     * 获取词汇表大小。
+     *
+     * @return 词汇表大小
+     */
+    public int getVocabularySize() {
+        return vocabulary.size();
+    }
+
     /**
      * 获取合并规则数量。
      *
