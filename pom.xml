@@ -113,7 +113,57 @@
 <!--            <version>1.8</version>-->
 <!--            <scope>system</scope>-->
 <!--            <systemPath>${java.home}/../lib/tools.jar</systemPath>-->
-<!--        </dependency>-->
+<!--        </dependency>
+    -->
+
+        <!-- ===== AI 框架示例依赖 ===== -->
+        <!-- LangChain4j -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-core</artifactId>
+            <version>1.13.0</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j</artifactId>
+            <version>1.13.0</version>
+        </dependency>
+
+        <!-- LangGraph4j -->
+        <dependency>
+            <groupId>org.bsc.langgraph4j</groupId>
+            <artifactId>langgraph4j-core</artifactId>
+            <version>1.8.14</version>
+        </dependency>
+
+        <!-- MCP SDK（独立于 Spring AI） -->
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp</artifactId>
+            <version>0.18.1</version>
+        </dependency>
+
+        <!-- A2A SDK -->
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-client</artifactId>
+            <version>0.3.3.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-server-common</artifactId>
+            <version>0.3.3.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-spec</artifactId>
+            <version>0.3.3.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-reference-jsonrpc</artifactId>
+            <version>0.3.3.Final</version>
+        </dependency>
     </dependencies>
 
     <build>
