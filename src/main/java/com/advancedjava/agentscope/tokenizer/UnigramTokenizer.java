@@ -56,7 +56,150 @@ public class UnigramTokenizer {
      * @throws IllegalArgumentException 如果corpus为空或包含空字符串
      */
     public void train(List<String> corpus) {
-        // TODO: 待实现
+        if (corpus == null || corpus.isEmpty()) {
+            throw new IllegalArgumentException("语料库不能为空");
+        }
+        for (String word : corpus) {
+            if (word == null) {
+                throw new IllegalArgumentException("语料库不能包含null值");
+            }
+        }
+
+        Map<String, Integer> wordFreqs = corpus.stream()
+                .collect(Collectors.toMap(
+                        w -> w,
+                        w -> 1,
+                        Integer::sum
+                ));
+
+        Set<String> initialVocab = buildInitialVocabulary(wordFreqs);
+        wordProbabilities.clear();
+
+        double initialProb = 1.0 / initialVocab.size();
+        for (String word : initialVocab) {
+            wordProbabilities.put(word, initialProb);
+        }
+
+        for (int iter = 0; iter < maxIterations; iter++) {
+            Map<String, Double> contributions = computeContributions(wordFreqs);
+            normalizeProbabilities(contributions);
+
+            if (wordProbabilities.size() > vocabSize) {
+                pruneVocabulary();
+            }
+        }
+    }
+
+    private Set<String> buildInitialVocabulary(Map<String, Integer> wordFreqs) {
+        Set<String> vocab = new HashSet<>();
+        Set<String> baseChars = new HashSet<>();
+        for (String word : wordFreqs.keySet()) {
+            for (char c : word.toCharArray()) {
+                baseChars.add(String.valueOf(c));
+            }
+            for (int i = 0; i < word.length(); i++) {
+                for (int j = i + 2; j <= Math.min(i + 8, word.length()); j++) {
+                    vocab.add(word.substring(i, j));
+                }
+            }
+        }
+        vocab.addAll(baseChars);
+        return vocab;
+    }
+
+    private Map<String, Double> computeContributions(Map<String, Integer> wordFreqs) {
+        Map<String, Double> contributions = new HashMap<>();
+        for (String word : wordFreqs.keySet()) {
+            int freq = wordFreqs.get(word);
+            List<String> bestPath = findBestPath(word);
+            for (String token : bestPath) {
+                contributions.merge(token, (double) freq, Double::sum);
+            }
+        }
+        return contributions;
+    }
+
+    private void normalizeProbabilities(Map<String, Double> contributions) {
+        double total = contributions.values().stream().mapToDouble(Double::doubleValue).sum();
+        if (total > 0) {
+            for (Map.Entry<String, Double> entry : contributions.entrySet()) {
+                wordProbabilities.put(entry.getKey(), entry.getValue() / total);
+            }
+        }
+    }
+
+    private void pruneVocabulary() {
+        Set<String> baseChars = wordProbabilities.keySet().stream()
+                .filter(s -> s.length() == 1)
+                .collect(Collectors.toSet());
+
+        List<Map.Entry<String, Double>> sorted = wordProbabilities.entrySet().stream()
+                .filter(e -> e.getKey().length() > 1)
+                .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                .collect(Collectors.toList());
+
+        Map<String, Double> newProbabilities = new HashMap<>();
+        int nonCharSlots = vocabSize - baseChars.size();
+        int keepCount = Math.min(nonCharSlots, sorted.size());
+        for (int i = 0; i < keepCount; i++) {
+            newProbabilities.put(sorted.get(i).getKey(), sorted.get(i).getValue());
+        }
+
+        for (String c : baseChars) {
+            newProbabilities.put(c, wordProbabilities.get(c));
+        }
+
+        wordProbabilities.clear();
+        wordProbabilities.putAll(newProbabilities);
+
+        double total = wordProbabilities.values().stream().mapToDouble(Double::doubleValue).sum();
+        if (total > 0) {
+            for (Map.Entry<String, Double> entry : wordProbabilities.entrySet()) {
+                entry.setValue(entry.getValue() / total);
+            }
+        }
+    }
+
+    private List<String> findBestPath(String text) {
+        int n = text.length();
+        double[] dp = new double[n + 1];
+        int[] parent = new int[n + 1];
+        Arrays.fill(dp, Double.NEGATIVE_INFINITY);
+        dp[0] = 0;
+
+        for (int i = 0; i < n; i++) {
+            if (dp[i] == Double.NEGATIVE_INFINITY) {
+                continue;
+            }
+            for (int j = i + 1; j <= Math.min(i + getMaxWordLength(), n); j++) {
+                String sub = text.substring(i, j);
+                Double prob = wordProbabilities.get(sub);
+                if (prob != null) {
+                    double logProb = Math.log(prob);
+                    if (dp[i] + logProb > dp[j]) {
+                        dp[j] = dp[i] + logProb;
+                        parent[j] = i;
+                    }
+                }
+            }
+        }
+
+        List<String> path = new ArrayList<>();
+        int pos = n;
+        while (pos > 0) {
+            int prev = parent[pos];
+            path.add(text.substring(prev, pos));
+            pos = prev;
+        }
+        Collections.reverse(path);
+        return path.isEmpty() ? Collections.singletonList(text) : path;
+    }
+
+    private int getMaxWordLength() {
+        return wordProbabilities.keySet().stream()
+                .mapToInt(String::length)
+                .max()
+                .orElse(1);
     }
     
     /**
@@ -68,10 +211,15 @@ public class UnigramTokenizer {
      * @throws IllegalArgumentException 如果text为空
      */
     public List<String> tokenize(String text) {
-        // TODO: 待实现
-        return Collections.emptyList();
+        if (text == null) {
+            throw new IllegalArgumentException("分词文本不能为null");
+        }
+        if (wordProbabilities.isEmpty()) {
+            throw new IllegalStateException("模型未训练，请先调用train()方法");
+        }
+        return findBestPath(text);
     }
-    
+
     /**
      * 获取词汇表大小。
      *
@@ -80,7 +228,7 @@ public class UnigramTokenizer {
     public int getVocabularySize() {
         return wordProbabilities.size();
     }
-    
+
     /**
      * 获取词汇表内容。
      *
