@@ -184,10 +184,47 @@ public class BpeTokenizer {
      * @throws IllegalArgumentException 如果text为空
      */
     public List<String> tokenize(String text) {
-        // TODO: 待实现
-        return Collections.emptyList();
+        if (text == null) {
+            throw new IllegalArgumentException("分词文本不能为null");
+        }
+        if (vocabulary.isEmpty()) {
+            throw new IllegalStateException("模型未训练，请先调用train()方法");
+        }
+
+        List<String> splits = new ArrayList<>();
+        for (char c : text.toCharArray()) {
+            splits.add(String.valueOf(c));
+        }
+
+        for (MergeRule rule : mergeRules) {
+            splits = applyMerge(splits, rule);
+        }
+
+        return splits;
     }
-    
+
+    private List<String> applyMerge(List<String> splits, MergeRule rule) {
+        if (splits.size() < 2) {
+            return new ArrayList<>(splits);
+        }
+
+        List<String> result = new ArrayList<>();
+        int i = 0;
+        while (i < splits.size()) {
+            if (i < splits.size() - 1
+                    && splits.get(i).equals(rule.first())
+                    && splits.get(i + 1).equals(rule.second())) {
+                result.add(rule.merged());
+                i += 2;
+            } else {
+                result.add(splits.get(i));
+                i++;
+            }
+        }
+
+        return result;
+    }
+
     /**
      * 获取词汇表内容。
      *

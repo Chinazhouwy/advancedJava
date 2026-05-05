@@ -47,4 +47,33 @@ public class BpeTokenizerTest {
         BpeTokenizer tokenizer = new BpeTokenizer(10);
         tokenizer.train(Arrays.asList("hello", null));  // 应抛异常
     }
+
+    @Test
+    public void shouldTokenizeAfterTraining() {
+        List<String> corpus = Arrays.asList("hello", "hello", "hello", "world");
+        BpeTokenizer tokenizer = new BpeTokenizer(8);
+        tokenizer.train(corpus);
+
+        List<String> result = tokenizer.tokenize("hello");
+
+        assertThat(result.size(), greaterThan(0));
+        assertThat(result.size(), lessThanOrEqualTo(5));
+
+        for (String token : result) {
+            assertThat(tokenizer.getVocabulary(), hasItem(token));
+        }
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void shouldRejectTokenizeBeforeTraining() {
+        BpeTokenizer tokenizer = new BpeTokenizer(10);
+        tokenizer.tokenize("hello");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldRejectNullText() {
+        BpeTokenizer tokenizer = new BpeTokenizer(10);
+        tokenizer.train(Arrays.asList("hello"));
+        tokenizer.tokenize(null);
+    }
 }
