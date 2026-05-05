@@ -52,8 +52,128 @@ public class BpeTokenizer {
      * @throws IllegalArgumentException 如果corpus为空或包含空字符串
      */
     public void train(List<String> corpus) {
-        // TODO: 待实现
+        if (corpus == null || corpus.isEmpty()) {
+            throw new IllegalArgumentException("语料库不能为空");
+        }
+        for (String word : corpus) {
+            if (word == null) {
+                throw new IllegalArgumentException("语料库不能包含null值");
+            }
+        }
+
+        // 统计单词频率
+        Map<String, Integer> wordFreqs = corpus.stream()
+                .collect(Collectors.toMap(
+                        w -> w,
+                        w -> 1,
+                        Integer::sum
+                ));
+
+        // 初始化词汇表：从所有单词的字符开始
+        for (String word : wordFreqs.keySet()) {
+            for (char c : word.toCharArray()) {
+                vocabulary.add(String.valueOf(c));
+            }
+        }
+
+        // 将每个单词拆分为字符列表
+        Map<String, List<String>> wordSplits = new HashMap<>();
+        for (String word : wordFreqs.keySet()) {
+            List<String> chars = new ArrayList<>();
+            for (char c : word.toCharArray()) {
+                chars.add(String.valueOf(c));
+            }
+            wordSplits.put(word, chars);
+        }
+
+        // 迭代合并，直到达到词汇表大小
+        int numMerges = vocabSize - vocabulary.size();
+        for (int i = 0; i < numMerges; i++) {
+            Map<StringPair, Integer> pairFreqs = countPairFreqs(wordSplits, wordFreqs);
+            if (pairFreqs.isEmpty()) {
+                break;
+            }
+
+            StringPair maxPair = findMaxFreqPair(pairFreqs);
+            String merged = maxPair.first() + maxPair.second();
+            mergeRules.add(new MergeRule(maxPair.first(), maxPair.second(), i));
+            vocabulary.add(merged);
+
+            // 应用合并到所有单词
+            for (Map.Entry<String, List<String>> entry : wordSplits.entrySet()) {
+                wordSplits.put(entry.getKey(), mergePair(entry.getValue(), maxPair));
+            }
+        }
     }
+
+    /**
+     * 统计所有相邻字符对的频率。
+     */
+    private Map<StringPair, Integer> countPairFreqs(
+            Map<String, List<String>> wordSplits,
+            Map<String, Integer> wordFreqs) {
+        Map<StringPair, Integer> pairFreqs = new HashMap<>();
+
+        for (Map.Entry<String, List<String>> entry : wordSplits.entrySet()) {
+            String word = entry.getKey();
+            List<String> splits = entry.getValue();
+            int freq = wordFreqs.get(word);
+
+            for (int i = 0; i < splits.size() - 1; i++) {
+                StringPair pair = new StringPair(splits.get(i), splits.get(i + 1));
+                pairFreqs.merge(pair, freq, Integer::sum);
+            }
+        }
+
+        return pairFreqs;
+    }
+
+    /**
+     * 找到频率最高的字符对。
+     */
+    private StringPair findMaxFreqPair(Map<StringPair, Integer> pairFreqs) {
+        StringPair maxPair = null;
+        int maxFreq = -1;
+
+        for (Map.Entry<StringPair, Integer> entry : pairFreqs.entrySet()) {
+            if (entry.getValue() > maxFreq) {
+                maxFreq = entry.getValue();
+                maxPair = entry.getKey();
+            }
+        }
+
+        return maxPair;
+    }
+
+    /**
+     * 在单词的字符列表中应用合并操作。
+     */
+    private List<String> mergePair(List<String> splits, StringPair pair) {
+        if (splits.size() < 2) {
+            return new ArrayList<>(splits);
+        }
+
+        List<String> newSplits = new ArrayList<>();
+        int i = 0;
+        while (i < splits.size()) {
+            if (i < splits.size() - 1
+                    && splits.get(i).equals(pair.first())
+                    && splits.get(i + 1).equals(pair.second())) {
+                newSplits.add(pair.first() + pair.second());
+                i += 2;
+            } else {
+                newSplits.add(splits.get(i));
+                i++;
+            }
+        }
+
+        return newSplits;
+    }
+
+    /**
+     * 字符对记录（用于BPE合并）。
+     */
+    public record StringPair(String first, String second) {}
     
     /**
      * 使用训练好的模型对文本进行分词。
