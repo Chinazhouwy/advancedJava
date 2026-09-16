@@ -1,0 +1,24 @@
+services:
+  neo4j:
+    # 使用社区版 Neo4j 运行本地学习 Demo。
+    image: neo4j:5.26-community
+    container_name: advanced-java-neo4j
+    # 7474 是 Neo4j Browser，7687 是 Java Driver 使用的 Bolt 端口。
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      # 本地 Demo 凭据，不要直接照搬到生产环境。
+      # 真实值从项目根目录的 .env 读取；该文件已被 Git 忽略。
+      NEO4J_AUTH: "${NEO4J_AUTH:?Set NEO4J_AUTH in the project .env file}"
+      # 限制本地容器堆内存，避免学习 Demo 占用过多资源。
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 512m
+    volumes:
+      # 数据和日志放在 Docker volume 中，容器重建后仍可保留。
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+
+volumes:
+  neo4j-data:
+  neo4j-logs:

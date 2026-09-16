@@ -6,11 +6,11 @@ spring:
       client:
         enabled: false
     openai:
-      api-key: sk-295f57e0ed6245d9861ca5aa8ab02b15
-      base-url: https://api.deepseek.com
+      api-key: ${SPRING_AI_OPENAI_API_KEY:}
+      base-url: ${SPRING_AI_OPENAI_BASE_URL:https://api.deepseek.com}
       chat:
         options:
-          model: deepseek-chat
+          model: ${SPRING_AI_MODEL:deepseek-chat}
           temperature: 0.7
           max-tokens: 2000
       embedding:

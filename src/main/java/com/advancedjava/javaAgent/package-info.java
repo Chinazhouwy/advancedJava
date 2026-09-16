@@ -5,4 +5,4 @@
  * 与 {@code com.advancedjava.agent} 包中的 Agent 代码配合使用，
  * 共同构成“目标应用 + 外挂增强器”的完整示例。
  */
-package com.advancedjava.demo;
+package com.advancedjava.javaAgent;

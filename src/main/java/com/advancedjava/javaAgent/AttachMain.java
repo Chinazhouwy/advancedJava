@@ -1,4 +1,4 @@
-package com.advancedjava.demo;
+package com.advancedjava.javaAgent;
 
 import com.sun.tools.attach.VirtualMachine;
 import com.sun.tools.attach.VirtualMachineDescriptor;

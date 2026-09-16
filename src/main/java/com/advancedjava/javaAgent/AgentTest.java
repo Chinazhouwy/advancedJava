@@ -1,4 +1,4 @@
-package com.advancedjava.demo;
+package com.advancedjava.javaAgent;
 
 /**
  * Java Agent 被增强的目标程序。

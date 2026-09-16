@@ -155,6 +155,32 @@ src/
 
 项目使用Maven进行构建管理，需要Java 17环境。
 
+### 本地环境变量
+
+真实凭据统一放在项目根目录的 `.env` 中，该文件已被 Git 忽略；仓库只提交不含真实值的 [.env.example](.env.example)。运行 Java 示例前执行：
+
+```bash
+set -a
+source .env
+set +a
+```
+
+启动 Neo4j 时显式指定 `.env`，避免从其他工作目录执行时找不到配置：
+
+```bash
+docker compose --env-file .env -f dev/neo4j/compose.yml up -d
+```
+
+如果是新环境，先复制 `.env.example` 为 `.env`，再填写本地密码和模型服务 Key。
+
+### 图数据库最短人脉路径 Demo
+
+`WeChatShareGraphDemo` 使用 Neo4j 建模微信分享关系，查询业务员到潜在客户的最短人脉路径，并结合页面停留时长过滤低意向客户。启动方式和 Cypher 说明见 [docs/neo4j-wechat-shortest-path.md](docs/neo4j-wechat-shortest-path.md)。
+
+### 本地灰度分流与 ALB 模拟 Demo
+
+`dev/gray-routing` 使用 OpenResty + Lua + Redis 模拟七层 ALB 灰度分流：根据 `X-Gray-Token` 查询 Redis 灰度白名单，把请求转发到 normal 或 gray 机器组。启动命令、原理拆解和测试矩阵见 [docs/gray-routing-alb.md](docs/gray-routing-alb.md)，启动后可打开 [灰度验证页](http://localhost:8080/test)；命令行说明仍见 [dev/gray-routing/README.md](dev/gray-routing/README.md)。
+
 ### 编译打包
 
 ```bash

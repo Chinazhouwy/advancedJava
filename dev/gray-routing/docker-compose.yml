@@ -1,0 +1,55 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: advanced-java-gray-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  redis-init:
+    image: redis:7-alpine
+    container_name: advanced-java-gray-redis-init
+    depends_on:
+      redis:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        redis-cli -h redis DEL gray:whitelist gray:token:gray-user-001 gray:token:gray-user-002
+        && redis-cli -h redis SADD gray:whitelist gray-user-001
+        && redis-cli -h redis SET gray:token:gray-user-002 gray
+        && echo 'gray routing data initialized'
+    restart: "no"
+
+  sf-normal:
+    image: openresty/openresty:alpine
+    container_name: advanced-java-sf-normal
+    volumes:
+      - ./backends/normal.conf:/etc/nginx/conf.d/default.conf:ro
+
+  sf-gray:
+    image: openresty/openresty:alpine
+    container_name: advanced-java-sf-gray
+    volumes:
+      - ./backends/gray.conf:/etc/nginx/conf.d/default.conf:ro
+
+  alb-simulator:
+    image: openresty/openresty:alpine
+    container_name: advanced-java-gray-alb
+    ports:
+      - "8080:80"
+    volumes:
+      - ./openresty/gateway.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./openresty/gray_router.lua:/etc/openresty/gray_router.lua:ro
+      - ./test/gray-test.html:/usr/local/openresty/html/gray-test.html:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      sf-normal:
+        condition: service_started
+      sf-gray:
+        condition: service_started

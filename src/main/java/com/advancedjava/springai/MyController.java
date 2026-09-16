@@ -4,8 +4,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -30,10 +28,10 @@ public class MyController {
 //    }
     
     public static void main(String[] args) {
-        // Manually configure OpenAiApi with custom URL, API Key and Model ID (e.g., for DeepSeek or other compatible providers)
-        String baseUrl = "https://api.deepseek.com"; // Replace with your target API base URL
-        String apiKey = "sk-71a8fccff3704fe2b6a81103d43fffa3"; // Replace with your actual API Key or environment variable
-        String modelId = "deepseek-v4-flash"; // Replace with your desired model ID
+        // 手动配置兼容 OpenAI 协议的服务；地址、Key、模型都从环境变量读取。
+        String baseUrl = envOrDefault("DEMO_AI_BASE_URL", "https://api.deepseek.com");
+        String apiKey = requiredEnv("DEMO_AI_API_KEY");
+        String modelId = envOrDefault("DEMO_AI_MODEL", "deepseek-chat");
 
         OpenAiApi openAiApi = OpenAiApi.builder()
                 .baseUrl(baseUrl)
@@ -55,5 +53,20 @@ public class MyController {
                 .content();
 
         System.out.println(answer);
+    }
+
+    private static String envOrDefault(String name, String defaultValue) {
+        String value = System.getenv(name);
+        return value == null || value.isBlank() ? defaultValue : value;
+    }
+
+    private static String requiredEnv(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(
+                    "缺少环境变量 " + name + "。请先执行：set -a; source .env; set +a"
+            );
+        }
+        return value;
     }
 }

@@ -28,3 +28,10 @@ replay_pid*
 target/
 .DS_Store
 **/.DS_Store
+
+.agentscope/
+
+# Local credentials and environment overrides. Keep only the template tracked.
+.env
+.env.*
+!.env.example
