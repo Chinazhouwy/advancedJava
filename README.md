@@ -181,6 +181,25 @@ docker compose --env-file .env -f dev/neo4j/compose.yml up -d
 
 `dev/gray-routing` 使用 OpenResty + Lua + Redis 模拟七层 ALB 灰度分流：根据 `X-Gray-Token` 查询 Redis 灰度白名单，把请求转发到 normal 或 gray 机器组。启动命令、原理拆解和测试矩阵见 [docs/gray-routing-alb.md](docs/gray-routing-alb.md)，启动后可打开 [灰度验证页](http://localhost:8080/test)；命令行说明仍见 [dev/gray-routing/README.md](dev/gray-routing/README.md)。
 
+### Redis 高级用法（Lua 脚本 + Java）Demo
+
+顶层 `redis` 包（与 `interview` 平级），8 个独立 main 演示 Redis 高频进阶场景（基于 Jedis 直连本地 Redis）：
+
+- [DistributedLockLuaDemo.java](src/main/java/com/advancedjava/redis/DistributedLockLuaDemo.java) - 分布式锁 Lua 原子解锁（防误删他人锁）
+- [SlidingWindowRateLimitDemo.java](src/main/java/com/advancedjava/redis/SlidingWindowRateLimitDemo.java) - ZSET + Lua 滑动窗口限流
+- [BatchIncrLuaDemo.java](src/main/java/com/advancedjava/redis/BatchIncrLuaDemo.java) - 一次 EVAL 原子批量累加（对比 Pipeline）
+- [CasUpdateLuaDemo.java](src/main/java/com/advancedjava/redis/CasUpdateLuaDemo.java) - Lua CAS 比较并交换（对比 WATCH/MULTI）
+- [DelayQueueLuaDemo.java](src/main/java/com/advancedjava/redis/DelayQueueLuaDemo.java) - ZSET + Lua 延迟队列原子领取
+- [StockOversellLuaDemo.java](src/main/java/com/advancedjava/redis/StockOversellLuaDemo.java) - 防超卖 + Redis 7 FUNCTION 按名调用
+- [StreamConsumeDemo.java](src/main/java/com/advancedjava/redis/StreamConsumeDemo.java) - Stream 消费组消息队列（XADD/XREADGROUP/XACK/XPENDING）
+- [VectorSearchDemo.java](src/main/java/com/advancedjava/redis/VectorSearchDemo.java) - Redis 集成向量库（RediSearch KNN + RedisJSON + 混合检索）
+
+运行前提 `docker run -d --name redis-demo -p 6379:6379 redis/redis-stack-server:latest`（Demo 8 需要 stack 镜像的 search/json 模块），原理、运行命令与实测输出见 [docs/redis-lua.md](docs/redis-lua.md)；包内还有逐 Demo 详解版 [src/main/java/com/advancedjava/redis/README.md](src/main/java/com/advancedjava/redis/README.md)。
+
+### TCC 三阶段流程 Demo
+
+`SeataTccDemo` 用一个 Java 文件展示 `@GlobalTransactional`、`@LocalTCC` 和 `@TwoPhaseBusinessAction` 的核心用法。它是学习用的 Seata API 骨架，不是开箱即跑的多服务工程；代码和说明见 [docs/tcc-order-demo.md](docs/tcc-order-demo.md)。
+
 ### 编译打包
 
 ```bash
