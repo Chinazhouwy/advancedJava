@@ -10,7 +10,7 @@ import java.util.UUID;
 /**
  * 演示 1：分布式锁的 Lua 原子解锁。
  *
- * 运行前提：本地有 Redis（docker run -d --name redis-demo -p 6379:6379 redis:7-alpine）。
+ * 运行前提：本地有 Redis（docker run -d --name redis-demo -p 6379:6379 redis:8-alpine）。
  * 运行方式：先 mvn compile，再
  *   mvn exec:java -Dexec.mainClass=com.advancedjava.redis.DistributedLockLuaDemo
  *

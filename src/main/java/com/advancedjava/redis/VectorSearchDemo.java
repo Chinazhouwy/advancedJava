@@ -1,6 +1,8 @@
 package com.advancedjava.redis;
 
+import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPooled;
+import redis.clients.jedis.Module;
 import redis.clients.jedis.json.Path2;
 import redis.clients.jedis.search.FTCreateParams;
 import redis.clients.jedis.search.IndexDataType;
@@ -11,9 +13,12 @@ import redis.clients.jedis.search.schemafields.TextField;
 import redis.clients.jedis.search.schemafields.VectorField;
 import redis.clients.jedis.search.schemafields.VectorField.VectorAlgorithm;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 演示 8：Redis 集成的向量库能力（RediSearch + RedisJSON）。
@@ -23,8 +28,14 @@ import java.util.Map;
  * - RediSearch：FT.CREATE 建索引、FT.SEARCH 查询；VECTOR 字段类型支持 HNSW / FLAT
  *   两种算法与 COSINE / L2 / IP 距离——这就是语义检索的底座。
  *
- * 运行环境需要 redis-stack 镜像（普通 redis 镜像不带 search/json 模块）：
+ * 运行环境：**Redis 8 官方镜像已内置 search / ReJSON 模块**，直接用即可：
+ *   docker run -d --name redis-demo -p 6379:6379 redis:8-alpine
+ * 若还在用 Redis 7.x，则需要 redis-stack 镜像（普通镜像不带 search/json 模块）：
  *   docker run -d --name redis-demo -p 6379:6379 redis/redis-stack-server:latest
+ *
+ * 补充：Redis 8 还新增了**原生 Vector Set 数据类型**（VADD / VSIM 等 13 个命令），
+ * 比这里的"建索引 + KNN"轻得多，适合纯相似度检索；本 Demo 演示的是带元数据过滤的
+ * RediSearch KNN 路线，适合 RAG 场景。
  *
  * KNN 检索流程（面试版一句话）：文本经 embedding 模型变成高维向量存进 VECTOR 字段，
  * 查询时把问题也变成向量，服务端按距离返回最近的 topK——匹配"意思"而非关键词。
@@ -45,15 +56,21 @@ public class VectorSearchDemo {
 
     private static final String INDEX = "demo-vector-index";
     private static final String KEY_PREFIX = "demo:doc:";
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT = 6379;
 
     public static void main(String[] args) throws Exception {
-        // JedisPooled：线程安全的连接池客户端；jsonSet 的对象序列化依赖 gson（jedis 传递依赖）
-        try (JedisPooled jedis = new JedisPooled("127.0.0.1", 6379)) {
+        // JedisPooled：线程安全的连接池客户端（FT.* / JSON.* 只在这个客户端上有）
+        try (JedisPooled jedis = new JedisPooled(HOST, PORT)) {
 
-            // ---------- 0) 前置检查：search/json 模块是否可用 ----------
-            if (!modulesAvailable(jedis)) {
-                System.out.println("当前 Redis 未加载 search/json 模块。请换容器：\n"
-                        + "  docker rm -f redis-demo && docker run -d --name redis-demo -p 6379:6379 redis/redis-stack-server:latest");
+            // ---------- 0) 前置检查：search / ReJSON 两个模块是否都在 ----------
+            List<String> missing = missingModules();
+            if (!missing.isEmpty()) {
+                System.out.println("当前 Redis 缺少模块: " + missing);
+                System.out.println("Redis 8 起官方镜像已内置，直接用即可：");
+                System.out.println("  docker run -d --name redis-demo -p 6379:6379 redis:8-alpine");
+                System.out.println("Redis 7.x 需要 redis-stack 镜像：");
+                System.out.println("  docker run -d --name redis-demo -p 6379:6379 redis/redis-stack-server:latest");
                 return;
             }
 
@@ -162,15 +179,35 @@ public class VectorSearchDemo {
         return bytes;
     }
 
-    /** 探测 search 模块是否加载：命令不存在才是"没模块"。 */
-    private static boolean modulesAvailable(JedisPooled jedis) {
-        try {
-            jedis.ftDropIndex("demo-probe-nonexistent");
-            return true;
-        } catch (RuntimeException e) {
-            String msg = String.valueOf(e.getMessage());
-            return !msg.contains("unknown command");
+    /**
+     * 前置检查：向量检索要同时用到 search（FT.*）和 ReJSON（JSON.*）两个模块。
+     *
+     * 直接查模块清单，不靠"故意让命令报错"来探测：
+     * - 语义直白，没有异常控制流；
+     * - 两个模块都检查，缺哪个能报出名字（旧写法只测了 search，漏了 ReJSON）；
+     * - 连接失败之类的真异常不会被误判成"没模块"。
+     *
+     * 注意模块名是 ReJSON，不是 json（MODULE LIST 里的实际名字）。
+     * 这里另开一个 Jedis 连接，是因为 moduleList() 只定义在 Jedis 上，
+     * 而 FT.* / JSON.* 命令只在 JedisPooled 上有，两者各缺一半。
+     *
+     * @return 缺失的模块名列表，空列表表示都齐了
+     */
+    private static List<String> missingModules() {
+        Set<String> loaded;
+        try (Jedis probe = new Jedis(HOST, PORT)) {
+            loaded = probe.moduleList().stream()
+                    .map(Module::getName)
+                    .collect(Collectors.toSet());
         }
+        List<String> missing = new ArrayList<>();
+        if (!loaded.contains("search")) {
+            missing.add("search (RediSearch，提供 FT.*)");
+        }
+        if (!loaded.contains("ReJSON")) {
+            missing.add("ReJSON (RedisJSON，提供 JSON.*)");
+        }
+        return missing;
     }
 
     private static void printHits(SearchResult result) {

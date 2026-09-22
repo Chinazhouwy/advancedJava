@@ -30,11 +30,12 @@ Lua 脚本把整段逻辑交给服务端一次执行，中途不插入其他客�
 
 ## 运行方式
 
-启动本地 Redis（**Demo 8 需要 redis-stack 镜像**，普通镜像不带 search/json 模块）：
+启动本地 Redis（**用 Redis 8**，它的官方镜像已内置 search / ReJSON 模块）：
 
 ```bash
-docker run -d --name redis-demo -p 6379:6379 redis/redis-stack-server:latest
-# 只用 Demo 1–7 的话 redis:7-alpine 也够
+docker run -d --name redis-demo -p 6379:6379 redis:8-alpine
+# 若还在用 Redis 7.x，Demo 8 需要 redis-stack 镜像（普通 7.x 镜像不带 search/json 模块）
+# docker run -d --name redis-demo -p 6379:6379 redis/redis-stack-server:latest
 ```
 
 依次运行（或 IDE 里直接跑各文件的 main）：
@@ -146,5 +147,17 @@ XACK worker-A 的第一条: 1 → ACK 后总数 2
 
 新增 `redis.clients:jedis`（轻量直连客户端，适合独立 main 演示；
 工程原有的 spring-data-redis 面向 Spring 应用，两者定位不同）。
-Demo 8 的向量检索走 Redis 服务端的 RediSearch 模块（redis-stack 镜像自带），
-不需要额外 Java 依赖；生产里 embedding 由 spring-ai-openai 等调用。
+Demo 8 的向量检索走 Redis 服务端的 RediSearch + RedisJSON 模块。**Redis 8 起官方镜像
+已内置并默认加载**（实测 `redis:8-alpine` 的 `MODULE LIST` 有 `search / ReJSON / vectorset /
+timeseries / bf`），不需要额外的 Java 依赖；生产里 embedding 由 spring-ai-openai 等调用。
+
+Redis 8 还新增了**原生 Vector Set 数据类型**（`VADD` / `VSIM` 等 13 个命令），适合纯相似度检索：
+
+```redis
+VADD vs:pets FP32 <二进制float32> dog-run
+VSIM vs:pets VALUES 4 0.85 0.15 0.7 0.05 COUNT 2 WITHSCORES
+```
+
+比"建索引 + KNN"轻得多（不用声明 schema、算法、维度），但没有 TEXT/TAG/NUMERIC 那种
+元数据混检能力。⚠️ 注意 score 语义相反：`FT.SEARCH KNN` 返回**距离**（越小越像），
+`VSIM` 返回**相似度**（越大越像）。

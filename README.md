@@ -194,7 +194,7 @@ docker compose --env-file .env -f dev/neo4j/compose.yml up -d
 - [StreamConsumeDemo.java](src/main/java/com/advancedjava/redis/StreamConsumeDemo.java) - Stream 消费组消息队列（XADD/XREADGROUP/XACK/XPENDING）
 - [VectorSearchDemo.java](src/main/java/com/advancedjava/redis/VectorSearchDemo.java) - Redis 集成向量库（RediSearch KNN + RedisJSON + 混合检索）
 
-运行前提 `docker run -d --name redis-demo -p 6379:6379 redis/redis-stack-server:latest`（Demo 8 需要 stack 镜像的 search/json 模块），原理、运行命令与实测输出见 [docs/redis-lua.md](docs/redis-lua.md)；包内还有逐 Demo 详解版 [src/main/java/com/advancedjava/redis/README.md](src/main/java/com/advancedjava/redis/README.md)。
+运行前提 `docker run -d --name redis-demo -p 6379:6379 redis:8-alpine`（Redis 8 官方镜像已内置 search/ReJSON 模块，Demo 8 可直接跑），原理、运行命令与实测输出见 [docs/redis-lua.md](docs/redis-lua.md)；包内还有逐 Demo 详解版 [src/main/java/com/advancedjava/redis/README.md](src/main/java/com/advancedjava/redis/README.md)。
 
 ### TCC 三阶段流程 Demo
 

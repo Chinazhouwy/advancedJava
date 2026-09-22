@@ -23,15 +23,15 @@ VectorSearchDemo.java            # 8) 向量库：RediSearch KNN + RedisJSON + �
 ```
 
 ```bash
-docker run -d --name redis-demo -p 6379:6379 redis:7-alpine   # 本地 Redis
+docker run -d --name redis-demo -p 6379:6379 redis:8-alpine   # 本地 Redis（推荐 8）
 mvn compile
 mvn exec:java -Dexec.mainClass=com.advancedjava.redis.DistributedLockLuaDemo
 # ...其余同理；IDE 里也可直接跑各文件的 main。所有 key 带 demo: 前缀，可随时清掉
 ```
 
-> Demo 8 需要 **redis-stack** 镜像（普通镜像不带 search/json 模块），替换容器即可：
+> Demo 8 依赖 RediSearch + RedisJSON 模块。**Redis 8 官方镜像已内置并默认加载**，所以
+> `redis:8-alpine` 直接能跑；若还在用 Redis 7.x，换成 redis-stack 镜像即可：
 > `docker rm -f redis-demo && docker run -d --name redis-demo -p 6379:6379 redis/redis-stack-server:latest`
-> 前 7 个 Demo 在两种镜像上都能跑。
 
 ---
 
@@ -132,6 +132,11 @@ mvn exec:java -Dexec.mainClass=com.advancedjava.redis.DistributedLockLuaDemo
   1. KNN 的 `=>` 语法属于 **DIALECT 2**，Jedis 里必须显式 `.dialect(2)`，
      否则报 `Syntax error at offset 1 near >[`；
   2. 查询向量要按 **FLOAT32 小端字节序**传，而 JSON 里存的是普通数字数组。
+- **Redis 8 的另一种选择**：新增了原生 **Vector Set** 数据类型（`VADD` / `VSIM` 等 13 个命令），
+  不用声明 schema / 算法 / 维度，适合纯相似度检索：
+  `VSIM vs:pets VALUES 4 0.85 0.15 0.7 0.05 COUNT 2 WITHSCORES`。
+  但它没有 TEXT/TAG/NUMERIC 混检能力，所以带元数据过滤的 RAG 检索仍走本 Demo 这条路。
+  ⚠️ score 语义相反：KNN 给**距离**（越小越像），VSIM 给**相似度**（越大越像）。
 
 ---
 
