@@ -1,4 +1,4 @@
-package com.advancedjava.agentscope.harmess;
+package com.advancedjava.agentscope.harnessAgent;
 
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.Msg;

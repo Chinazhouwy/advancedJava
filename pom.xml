@@ -156,6 +156,18 @@
             <artifactId>jedis</artifactId>
             <version>5.2.0</version>
         </dependency>
+
+        <!-- MQ 基础 API 演示：RocketMQ / Kafka 官方客户端（教学演示必需） -->
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-client</artifactId>
+            <version>4.9.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>3.7.0</version>
+        </dependency>
 <!--        <dependency>-->
 <!--            <groupId>com.sun</groupId>-->
 <!--            <artifactId>tools</artifactId>-->
