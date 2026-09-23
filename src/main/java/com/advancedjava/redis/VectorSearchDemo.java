@@ -1,8 +1,6 @@
 package com.advancedjava.redis;
 
-import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPooled;
-import redis.clients.jedis.Module;
 import redis.clients.jedis.json.Path2;
 import redis.clients.jedis.search.FTCreateParams;
 import redis.clients.jedis.search.IndexDataType;
@@ -13,42 +11,24 @@ import redis.clients.jedis.search.schemafields.TextField;
 import redis.clients.jedis.search.schemafields.VectorField;
 import redis.clients.jedis.search.schemafields.VectorField.VectorAlgorithm;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
- * 演示 8：Redis 集成的向量库能力（RediSearch + RedisJSON）。
+ * 演示 8：Redis 向量库基本用法（RediSearch KNN + RedisJSON）。
  *
- * "Redis 当向量库"不是比喻，是官方模块栈：
- * - RedisJSON：文档型存储（JSON.SET / JSON.GET），向量的宿主数据结构；
- * - RediSearch：FT.CREATE 建索引、FT.SEARCH 查询；VECTOR 字段类型支持 HNSW / FLAT
- *   两种算法与 COSINE / L2 / IP 距离——这就是语义检索的底座。
+ * 流程只有三步：
+ * 1. JSON.SET 写入带向量的文档；
+ * 2. FT.CREATE 在 JSON 上建 HNSW 向量索引；
+ * 3. FT.SEARCH 用 KNN 语句做相似度检索（可叠加元数据过滤）。
  *
- * 运行环境：**Redis 8 官方镜像已内置 search / ReJSON 模块**，直接用即可：
+ * 运行环境：Redis 8 官方镜像已内置 search / ReJSON 模块：
  *   docker run -d --name redis-demo -p 6379:6379 redis:8-alpine
- * 若还在用 Redis 7.x，则需要 redis-stack 镜像（普通镜像不带 search/json 模块）：
- *   docker run -d --name redis-demo -p 6379:6379 redis/redis-stack-server:latest
  *
- * 补充：Redis 8 还新增了**原生 Vector Set 数据类型**（VADD / VSIM 等 13 个命令），
- * 比这里的"建索引 + KNN"轻得多，适合纯相似度检索；本 Demo 演示的是带元数据过滤的
- * RediSearch KNN 路线，适合 RAG 场景。
- *
- * KNN 检索流程（面试版一句话）：文本经 embedding 模型变成高维向量存进 VECTOR 字段，
- * 查询时把问题也变成向量，服务端按距离返回最近的 topK——匹配"意思"而非关键词。
- * 本 Demo 用手工构造的 4 维玩具向量演示全流程，生产里向量来自 OpenAI/DashScope 等
- * embedding API（工程已接 spring-ai-openai）。
- *
- * 两个必须知道的坑（本 Demo 踩过并修好）：
- * 1. KNN 语法 `*=>[KNN k @field $vec AS score]` 需要 DIALECT 2，
- *    Jedis 里必须显式 .dialect(2)，否则报 "Syntax error at offset 1 near >["；
- * 2. 查询向量要以 FLOAT32 小端字节序传（见 toFloatBytes），而 JSON 里存的是数字数组。
- *
- * 【部署形态提示】Cluster：FT.* 以索引名做路由，RediSearch 集群版自行维护分片内索引；
- * 主从上索引定义随 RDB/AOF 复制，replica 提升后 FT.SEARCH 可直接用。
+ * 两个必踩的坑：
+ * 1. KNN 的 {@code =>} 语法属于 DIALECT 2，Jedis 必须显式 .dialect(2)，否则语法报错；
+ * 2. 查询向量按 FLOAT32 小端字节序传（见 toFloatBytes），JSON 里存的则是数字数组。
  *
  * 运行：mvn exec:java -Dexec.mainClass=com.advancedjava.redis.VectorSearchDemo
  */
@@ -56,91 +36,54 @@ public class VectorSearchDemo {
 
     private static final String INDEX = "demo-vector-index";
     private static final String KEY_PREFIX = "demo:doc:";
-    private static final String HOST = "127.0.0.1";
-    private static final int PORT = 6379;
 
     public static void main(String[] args) throws Exception {
-        // JedisPooled：线程安全的连接池客户端（FT.* / JSON.* 只在这个客户端上有）
-        try (JedisPooled jedis = new JedisPooled(HOST, PORT)) {
+        try (JedisPooled jedis = new JedisPooled("127.0.0.1", 6379)) {
 
-            // ---------- 0) 前置检查：search / ReJSON 两个模块是否都在 ----------
-            List<String> missing = missingModules();
-            if (!missing.isEmpty()) {
-                System.out.println("当前 Redis 缺少模块: " + missing);
-                System.out.println("Redis 8 起官方镜像已内置，直接用即可：");
-                System.out.println("  docker run -d --name redis-demo -p 6379:6379 redis:8-alpine");
-                System.out.println("Redis 7.x 需要 redis-stack 镜像：");
-                System.out.println("  docker run -d --name redis-demo -p 6379:6379 redis/redis-stack-server:latest");
-                return;
-            }
-
-            // ---------- 1) 清理旧数据并写入 JSON 文档 ----------
-            try {
-                jedis.ftDropIndex(INDEX);
-            } catch (RuntimeException ignored) {
-                // 首次运行索引不存在
-            }
-            for (int i = 1; i <= 4; i++) {
-                jedis.jsonDel(KEY_PREFIX + i);
-            }
-
+            // ---------- 1) 写入 JSON 文档（title + category + 向量） ----------
             // 玩具语义空间：4 维依次代表 [动物性, 食物性, 运动感, 科技感]
             // 真实场景是 1536+ 维、由 embedding 模型输出
             writeDoc(jedis, 1, "金毛犬在公园奔跑", "pet", new float[]{0.9f, 0.1f, 0.8f, 0.0f});
             writeDoc(jedis, 2, "红烧肉的做法", "food", new float[]{0.1f, 0.9f, 0.1f, 0.0f});
             writeDoc(jedis, 3, "机器学习的向量检索", "tech", new float[]{0.0f, 0.1f, 0.2f, 0.9f});
             writeDoc(jedis, 4, "宠物猫和狗粮", "pet", new float[]{0.8f, 0.3f, 0.2f, 0.0f});
-            System.out.println("已写入 4 篇文档到 RedisJSON");
+            System.out.println("已写入 4 篇文档");
 
-            // ---------- 2) FT.CREATE：JSON 文档上建 HNSW 向量索引 ----------
-            // ON JSON + PREFIX 圈定哪些 key 归这个索引管；三种字段类型各来一个
+            // ---------- 2) 建索引（重复运行先删旧索引） ----------
+            dropIndexQuietly(jedis);
             jedis.ftCreate(INDEX,
                     new FTCreateParams().on(IndexDataType.JSON).addPrefix(KEY_PREFIX),
                     List.of(
-                            TextField.of("$.title").as("title"),          // 关键词检索用
-                            TagField.of("$.category").as("category"),     // 元数据过滤用（不分词）
+                            TextField.of("$.title").as("title"),
+                            TagField.of("$.category").as("category"),
                             VectorField.builder()
-                                    .fieldName("$.vector").as("vector")   // KNN 检索用
+                                    .fieldName("$.vector").as("vector")
                                     .algorithm(VectorAlgorithm.HNSW)
-                                    .attributes(vectorAttrs())
+                                    .attributes(Map.of(
+                                            "TYPE", "FLOAT32",
+                                            "DIM", 4,
+                                            "DISTANCE_METRIC", "COSINE"))
                                     .build()));
-            System.out.println("FT.CREATE 完成，等待模块回填索引...");
-            Thread.sleep(800);   // 简单起见睡一下；生产中轮询 FT.INFO 的 indexing 状态
+            Thread.sleep(800);   // 等模块回填索引；生产中轮询 FT.INFO 的 indexing 状态
+            System.out.println("FT.CREATE 完成");
 
-            // ---------- 3) 纯向量 KNN：「狗在奔跑」找最近邻 ----------
-            // 注意 dialect(2)：KNN 的 => 语法属于 dialect 2，缺了它直接语法报错
+            // ---------- 3) 纯向量 KNN：「狗在奔跑」找 top2 ----------
             SearchResult knn = jedis.ftSearch(INDEX,
                     new Query("*=>[KNN 2 @vector $vec AS score]")
                             .addParam("vec", toFloatBytes(new float[]{0.85f, 0.15f, 0.7f, 0.05f}))
                             .dialect(2)
                             .returnFields("title", "category", "score"));
-            System.out.println("\n① 查询「狗在奔跑」top2（score 是余弦距离，越小越像）:");
+            System.out.println("\n① KNN 查询「狗在奔跑」top2（score 是余弦距离，越小越像）:");
             printHits(knn);
 
-            // ---------- 4) 混合检索：先按标签过滤，再算近邻 ----------
-            // 这种 "metadata filter + vector search" 是 RAG 里最常用的形态
+            // ---------- 4) 混合检索：先按标签过滤，再算近邻（RAG 常用形态） ----------
             SearchResult hybrid = jedis.ftSearch(INDEX,
                     new Query("@category:{tech}=>[KNN 2 @vector $vec AS score]")
                             .addParam("vec", toFloatBytes(new float[]{0.0f, 0.1f, 0.2f, 0.9f}))
                             .dialect(2)
                             .returnFields("title", "category", "score"));
-            System.out.println("\n② 只用 category=tech 的文档做 KNN（过滤掉宠物/美食）:");
+            System.out.println("\n② 只在 category=tech 里做 KNN:");
             printHits(hybrid);
-
-            // ---------- 5) 对照：纯关键词检索 ----------
-            SearchResult keyword = jedis.ftSearch(INDEX,
-                    new Query("@title:狗").returnFields("title", "category"));
-            System.out.println("\n③ 关键词检索 @title:狗 —— 中文默认不分词，整句是一个 token，命中 "
-                    + keyword.getTotalResults() + " 条:");
-            printHits(keyword);
-
-            SearchResult prefix = jedis.ftSearch(INDEX,
-                    new Query("@title:金毛犬*").returnFields("title", "category"));
-            System.out.println("\n④ 关键词前缀检索 @title:金毛犬* —— 必须字面命中开头才行:");
-            printHits(prefix);
-
-            System.out.println("\n结论：向量检索能把语义相近的「宠物猫和狗粮」一起召回，关键词检索做不到"
-                    + "——这就是语义检索的价值，也是 RAG 选它的原因。");
         }
     }
 
@@ -151,22 +94,20 @@ public class VectorSearchDemo {
         doc.put("title", title);
         doc.put("category", category);
         doc.put("vector", vec);
-        // jsonSetWithEscape：新版 stack 对 JSON.SET 的 path 校验更严，转义版兼容性更好
+        // jsonSetWithEscape：新版对 JSON.SET 的 path 校验更严，转义版兼容性更好
         jedis.jsonSetWithEscape(KEY_PREFIX + id, Path2.ROOT_PATH, doc);
     }
 
-    /** HNSW 参数：FLOAT32 / DIM=4（玩具维度）/ COSINE；M 与 EF_CONSTRUCTION 调"精度 vs 内存/构建耗时"。 */
-    private static Map<String, Object> vectorAttrs() {
-        Map<String, Object> attrs = new HashMap<>();
-        attrs.put("TYPE", "FLOAT32");
-        attrs.put("DIM", 4);
-        attrs.put("DISTANCE_METRIC", "COSINE");
-        attrs.put("M", 16);
-        attrs.put("EF_CONSTRUCTION", 100);
-        return attrs;
+    /** 重复运行时索引已存在会报错，静默删掉即可（文档 key 不删，直接覆盖写）。 */
+    private static void dropIndexQuietly(JedisPooled jedis) {
+        try {
+            jedis.ftDropIndex(INDEX);
+        } catch (RuntimeException ignored) {
+            // 首次运行索引不存在
+        }
     }
 
-    /** KNN 的查询向量必须按 FLOAT32 小端字节序传（JSON 里则是普通数字数组）。 */
+    /** KNN 查询向量必须按 FLOAT32 小端字节序传。 */
     private static byte[] toFloatBytes(float[] vec) {
         byte[] bytes = new byte[vec.length * 4];
         for (int i = 0; i < vec.length; i++) {
@@ -177,37 +118,6 @@ public class VectorSearchDemo {
             bytes[i * 4 + 3] = (byte) ((bits >> 24) & 0xFF);
         }
         return bytes;
-    }
-
-    /**
-     * 前置检查：向量检索要同时用到 search（FT.*）和 ReJSON（JSON.*）两个模块。
-     *
-     * 直接查模块清单，不靠"故意让命令报错"来探测：
-     * - 语义直白，没有异常控制流；
-     * - 两个模块都检查，缺哪个能报出名字（旧写法只测了 search，漏了 ReJSON）；
-     * - 连接失败之类的真异常不会被误判成"没模块"。
-     *
-     * 注意模块名是 ReJSON，不是 json（MODULE LIST 里的实际名字）。
-     * 这里另开一个 Jedis 连接，是因为 moduleList() 只定义在 Jedis 上，
-     * 而 FT.* / JSON.* 命令只在 JedisPooled 上有，两者各缺一半。
-     *
-     * @return 缺失的模块名列表，空列表表示都齐了
-     */
-    private static List<String> missingModules() {
-        Set<String> loaded;
-        try (Jedis probe = new Jedis(HOST, PORT)) {
-            loaded = probe.moduleList().stream()
-                    .map(Module::getName)
-                    .collect(Collectors.toSet());
-        }
-        List<String> missing = new ArrayList<>();
-        if (!loaded.contains("search")) {
-            missing.add("search (RediSearch，提供 FT.*)");
-        }
-        if (!loaded.contains("ReJSON")) {
-            missing.add("ReJSON (RedisJSON，提供 JSON.*)");
-        }
-        return missing;
     }
 
     private static void printHits(SearchResult result) {

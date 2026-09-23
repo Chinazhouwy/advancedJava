@@ -118,24 +118,19 @@ mvn exec:java -Dexec.mainClass=com.advancedjava.redis.DistributedLockLuaDemo
 
 ### 8. VectorSearchDemo —— Redis 集成的向量库（RediSearch + RedisJSON）
 
-- **不是比喻，是官方模块栈**：RedisJSON 存文档（向量的宿主）+ RediSearch 建索引做 KNN，
-  VECTOR 字段支持 HNSW / FLAT 与 COSINE / L2 / IP 距离。
+- **基本用法三步**：`JSON.SET` 写入带向量的文档 → `FT.CREATE` 建 HNSW 索引 →
+  `FT.SEARCH` 用 KNN 语句检索；VECTOR 字段支持 HNSW / FLAT 与 COSINE / L2 / IP 距离。
 - **KNN 一句话**：文本经 embedding 变成向量存进字段，查询时把问题也变成向量，
   按距离返回 topK——匹配"意思"而非关键词。
 - **实测**（4 维玩具向量，依次代表 动物性/食物性/运动感/科技感）：
-  - 查「狗在奔跑」→ 命中 `金毛犬在公园奔跑`(0.003) 与 `宠物猫和狗粮`(0.114)，
-    美食类被自然排除；
-  - 混合检索 `@category:{tech}=>[KNN 2 ...]` → 先按标签过滤再算近邻，只命中 tech 文档；
-  - 关键词对照 `@title:狗` → **0 条**（中文默认不分词，整句是一个 token），
-    前缀 `@title:金毛犬*` 才能命中 1 条。
+  - 查「狗在奔跑」→ 命中 `金毛犬在公园奔跑` 与 `宠物猫和狗粮`，美食类被自然排除；
+  - 混合检索 `@category:{tech}=>[KNN 2 ...]` → 先按标签过滤再算近邻，只命中 tech 文档。
 - **两个真坑**：
   1. KNN 的 `=>` 语法属于 **DIALECT 2**，Jedis 里必须显式 `.dialect(2)`，
      否则报 `Syntax error at offset 1 near >[`；
   2. 查询向量要按 **FLOAT32 小端字节序**传，而 JSON 里存的是普通数字数组。
-- **Redis 8 的另一种选择**：新增了原生 **Vector Set** 数据类型（`VADD` / `VSIM` 等 13 个命令），
-  不用声明 schema / 算法 / 维度，适合纯相似度检索：
-  `VSIM vs:pets VALUES 4 0.85 0.15 0.7 0.05 COUNT 2 WITHSCORES`。
-  但它没有 TEXT/TAG/NUMERIC 混检能力，所以带元数据过滤的 RAG 检索仍走本 Demo 这条路。
+- **Redis 8 的另一种选择**：原生 **Vector Set** 数据类型（`VADD` / `VSIM`）不用建索引，
+  适合纯相似度检索；但没有 TEXT/TAG 混检能力，带元数据过滤的 RAG 仍走本 Demo 这条路。
   ⚠️ score 语义相反：KNN 给**距离**（越小越像），VSIM 给**相似度**（越大越像）。
 
 ---
